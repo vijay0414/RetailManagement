@@ -19,7 +19,7 @@ const notifySupplier = ({ supplierName, supplierContact, productName, remainingS
   const timestamp = new Date().toISOString();
 
   console.log('─────────────────────────────────────────────');
-  console.log(`📦 SUPPLIER NOTIFICATION [${timestamp}]`);
+  console.log(`   SUPPLIER NOTIFICATION [${timestamp}]`);
   console.log(`   Supplier : ${supplierName}`);
   console.log(`   Contact  : ${supplierContact}`);
   console.log(`   Product  : ${productName}`);

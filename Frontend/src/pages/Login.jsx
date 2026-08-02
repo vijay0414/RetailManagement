@@ -5,19 +5,19 @@ import { useApp } from '../context/AppContext';
 
 const HINTS = [
   { role: 'Manager', employeeId: 'EMP001', password: 'manager123', display: 'EMP001 / manager123' },
-  { role: 'Biller',  employeeId: 'EMP002', password: 'biller123',  display: 'EMP002 / biller123'  },
+  { role: 'Biller', employeeId: 'EMP002', password: 'biller123', display: 'EMP002 / biller123' },
 ];
 
 export default function Login() {
   const { login, currentUser } = useApp();
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [employeeId, setEmployeeId] = useState('');
-  const [password,   setPassword]   = useState('');
-  const [showPw,     setShowPw]     = useState(false);
-  const [error,      setError]      = useState('');
-  const [loading,    setLoading]    = useState(false);
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   // Already logged in — redirect via <Navigate> (safe during render)
   if (currentUser) {
@@ -111,6 +111,19 @@ export default function Login() {
           </button>
         </form>
 
+        <div style={{ marginTop: '16px', textAlign: 'center', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-sub)' }}>
+            Don't have an account?{' '}
+            <button
+              onClick={() => navigate('/signup')}
+              className="link-btn"
+              style={{ display: 'inline', textTransform: 'none', padding: 0, font: 'inherit', verticalAlign: 'baseline' }}
+            >
+              Sign Up
+            </button>
+          </p>
+        </div>
+
         {/* Demo hints */}
         <div className="demo-hints">
           <p className="demo-hints-label">Demo credentials — click to fill:</p>
@@ -128,6 +141,6 @@ export default function Login() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
