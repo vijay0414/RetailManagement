@@ -23,15 +23,15 @@ export function AppProvider({ children }) {
   const [authLoading, setAuthLoading] = useState(true);
 
   // ── Data ──────────────────────────────────────────────────────────────────
-  const [products,       setProducts]       = useState([]);
-  const [bills,          setBills]          = useState([]);
+  const [products, setProducts] = useState([]);
+  const [bills, setBills] = useState([]);
   const [reorderHistory, setReorderHistory] = useState([]);
-  const [stockAlerts,    setStockAlerts]    = useState([]);
-  const [billers,        setBillers]        = useState([]);
+  const [stockAlerts, setStockAlerts] = useState([]);
+  const [billers, setBillers] = useState([]);
 
   // ── Reports ───────────────────────────────────────────────────────────────
-  const [todayStats,   setTodayStats]   = useState(null);   // { totalRevenue, billCount }
-  const [profitStats,  setProfitStats]  = useState(null);   // { totalRevenue, totalCost, totalProfit, billCount, dateRange }
+  const [todayStats, setTodayStats] = useState(null);   // { totalRevenue, billCount }
+  const [profitStats, setProfitStats] = useState(null);   // { totalRevenue, totalCost, totalProfit, billCount, dateRange }
 
   // ── Toasts ────────────────────────────────────────────────────────────────
   const [toasts, setToasts] = useState([]);
@@ -47,7 +47,7 @@ export function AppProvider({ children }) {
       if (!getToken()) { setAuthLoading(false); return; }
       try {
         const res = await authApi.me();
-        const u   = res.data;
+        const u = res.data;
         setCurrentUser({ id: u.userId, name: u.username, employeeId: u.employeeId, role: u.role });
       } catch {
         clearToken();
@@ -86,6 +86,14 @@ export function AppProvider({ children }) {
     return { success: true, user };
   }, []);
 
+  const register = useCallback(async (signupData) => {
+    const res = await authApi.register(signupData);
+    setToken(res.data.token);
+    const user = { id: res.data.userId, name: res.data.name, employeeId: res.data.employeeId, role: res.data.role };
+    setCurrentUser(user);
+    return { success: true, user };
+  }, []);
+
   const logout = useCallback(() => {
     clearToken();
     setCurrentUser(null);
@@ -107,18 +115,18 @@ export function AppProvider({ children }) {
 
   const addProduct = useCallback(async (formData) => {
     const payload = {
-      name:             formData.name,
-      category:         formData.category,
-      price:            Number(formData.price),
-      costPrice:        Number(formData.costPrice) || 0,
-      quantity:         Number(formData.stock),
-      supplierName:     formData.supplierName,
-      supplierContact:  formData.supplierContact,
-      supplierEmail:    formData.supplierEmail || '',
+      name: formData.name,
+      category: formData.category,
+      price: Number(formData.price),
+      costPrice: Number(formData.costPrice) || 0,
+      quantity: Number(formData.stock),
+      supplierName: formData.supplierName,
+      supplierContact: formData.supplierContact,
+      supplierEmail: formData.supplierEmail || '',
       reorderThreshold: Number(formData.reorderThreshold) || 5,
     };
     const res = await productApi.create(payload);
-    const p   = normalizeProduct(res.data);
+    const p = normalizeProduct(res.data);
     setProducts((prev) => [p, ...prev]);
     return p;
   }, []);
@@ -146,8 +154,8 @@ export function AppProvider({ children }) {
    */
   const createBill = useCallback(async (cartItems, customerEmail) => {
     const items = cartItems.map((i) => ({ productId: i.productId, qty: i.qty }));
-    const res   = await billApi.create(items, customerEmail);
-    const bill  = normalizeBill(res.data);
+    const res = await billApi.create(items, customerEmail);
+    const bill = normalizeBill(res.data);
     setBills((prev) => [bill, ...prev]);
     await loadProducts();               // refresh stock counts
     await loadTodayStats();             // refresh revenue card
@@ -175,7 +183,7 @@ export function AppProvider({ children }) {
    * params: productId, quantity, expectedDeliveryDate, managerFeedback
    */
   const addReorder = useCallback(async (productId, quantity, expectedDeliveryDate, managerFeedback) => {
-    const res   = await reorderApi.create({
+    const res = await reorderApi.create({
       productId,
       quantity,
       expectedDeliveryDate,
@@ -227,7 +235,7 @@ export function AppProvider({ children }) {
   }, []);
 
   const createBiller = useCallback(async (data) => {
-    const res    = await userApi.createBiller(data);
+    const res = await userApi.createBiller(data);
     await loadBillers();
     return res;
   }, [loadBillers]);
@@ -275,7 +283,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       // auth
-      currentUser, authLoading, login, logout,
+      currentUser, authLoading, login, logout, register,
       // products
       products, addProduct, getProductByBarcode, loadProducts,
       // bills
@@ -337,22 +345,22 @@ function normalizeBill(b) {
 function normalizeReorder(r) {
   return {
     id: r._id,
-    productId:    r.productId?._id || r.productId,
-    barcode:      r.productId?.barcode || '',
-    productName:  r.productId?.name   || '—',
+    productId: r.productId?._id || r.productId,
+    barcode: r.productId?.barcode || '',
+    productName: r.productId?.name || '—',
     supplierName: r.supplierName,
-    qty:          r.quantity,
-    feedback:     r.managerFeedback   || '',
+    qty: r.quantity,
+    feedback: r.managerFeedback || '',
     expectedDeliveryDate: r.expectedDeliveryDate
       ? new Date(r.expectedDeliveryDate).toLocaleDateString('en-IN', {
-          day: '2-digit', month: 'short', year: 'numeric',
-        })
+        day: '2-digit', month: 'short', year: 'numeric',
+      })
       : '—',
     date: new Date(r.createdAt).toLocaleString('en-IN', {
       day: '2-digit', month: 'short', year: 'numeric',
       hour: '2-digit', minute: '2-digit', hour12: true,
     }),
-    status:    r.status === 'received' ? 'Delivered' : 'Placed',
+    status: r.status === 'received' ? 'Delivered' : 'Placed',
     rawStatus: r.status,
   };
 }
@@ -361,14 +369,14 @@ function normalizeAlert(a) {
   return {
     alertId: a._id, id: a._id,
     productId: a.productId?._id || a.productId,
-    name:      a.productId?.name       || '—',
-    barcode:   a.productId?.barcode    || '',
-    category:  a.productId?.category   || '',
-    stock:     a.remainingStock,
+    name: a.productId?.name || '—',
+    barcode: a.productId?.barcode || '',
+    category: a.productId?.category || '',
+    stock: a.remainingStock,
     reorderThreshold: a.productId?.reorderThreshold ?? 5,
-    supplierName:    a.supplierName,
+    supplierName: a.supplierName,
     supplierContact: a.supplierContact,
-    status:    a.status,
+    status: a.status,
     createdAt: a.createdAt,
   };
 }
