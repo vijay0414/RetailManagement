@@ -1,1 +1,0 @@
-The frontend creation process for the RetailManagement
