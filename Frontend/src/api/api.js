@@ -5,7 +5,7 @@
  * Token is stored in localStorage and attached as a Bearer header on every request.
  */
 
-const BASE = '/api';
+const BASE = import.meta.env.VITE_API_URL || '/api';
 
 // ─── Token helpers ─────────────────────────────────────────────────────────
 export const getToken = () => localStorage.getItem('ss_token');
