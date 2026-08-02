@@ -17,9 +17,23 @@ const { errorHandler, notFound } = require('./middleware/errorHandler');
 const app = express();
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
+// FRONTEND_URL may be a comma-separated list of allowed origins (e.g. Vercel
+// preview URLs + production URL). Falls back to allowing all origins only if
+// the env var is missing — avoids "Failed to fetch" after first deploy.
+const allowedOrigins = FRONTEND_URL
+  ? FRONTEND_URL.split(',').map((u) => u.trim())
+  : [];
+
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: allowedOrigins.length
+      ? (incomingOrigin, callback) => {
+          // Allow requests with no Origin header (e.g. curl, Postman, server-to-server)
+          if (!incomingOrigin) return callback(null, true);
+          if (allowedOrigins.includes(incomingOrigin)) return callback(null, true);
+          callback(new Error(`CORS: origin ${incomingOrigin} not allowed`));
+        }
+      : '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
