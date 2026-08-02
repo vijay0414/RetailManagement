@@ -16,10 +16,7 @@ const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 const app = express();
 
-// ─── CORS ─────────────────────────────────────────────────────────────────────
-// FRONTEND_URL may be a comma-separated list of allowed origins (e.g. Vercel
-// preview URLs + production URL). Falls back to allowing all origins only if
-// the env var is missing — avoids "Failed to fetch" after first deploy.
+
 const allowedOrigins = FRONTEND_URL
   ? FRONTEND_URL.split(',').map((u) => u.trim())
   : [];
