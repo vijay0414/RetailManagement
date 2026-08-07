@@ -61,12 +61,12 @@ const deductStock = async (resolvedItems) => {
       if (!existingAlert) {
         // ── First time this product crosses below threshold ──
         await StockAlert.create({
-          productId:      product._id,
+          productId: product._id,
           remainingStock: newQuantity,
-          supplierName:   product.supplierName,
+          supplierName: product.supplierName,
           supplierContact: product.supplierContact,
-          supplierEmail:  product.supplierEmail || '',
-          status:         'pending',
+          supplierEmail: product.supplierEmail || '',
+          status: 'pending',
         });
 
         console.log(
@@ -76,21 +76,19 @@ const deductStock = async (resolvedItems) => {
 
         // Send heads-up email to supplier (non-blocking — failure must not break billing)
         if (product.supplierEmail) {
-          try {
-            await sendLowStockAlertEmail({
-              supplierEmail:   product.supplierEmail,
-              supplierName:    product.supplierName,
-              supplierContact: product.supplierContact,
-              productName:     product.name,
-              remainingStock:  newQuantity,
-              reorderThreshold: product.reorderThreshold,
-            });
-          } catch (emailErr) {
+          sendLowStockAlertEmail({
+            supplierEmail: product.supplierEmail,
+            supplierName: product.supplierName,
+            supplierContact: product.supplierContact,
+            productName: product.name,
+            remainingStock: newQuantity,
+            reorderThreshold: product.reorderThreshold,
+          }).catch((emailErr) => {
             console.error(
               `❌ Low-stock alert email failed for "${product.name}":`,
               emailErr.message
             );
-          }
+          });
         } else {
           console.log(
             `ℹ️  No supplierEmail set for "${product.name}" — skipping low-stock email.`

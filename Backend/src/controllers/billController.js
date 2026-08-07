@@ -107,19 +107,17 @@ const createBill = async (req, res, next) => {
     // ── Step 6: Email invoice to customer (non-blocking) ─────────────────────
     let emailSent = false;
     if (customerEmail && customerEmail.trim()) {
-      try {
-        await sendCustomerBillEmail({
-          customerEmail: customerEmail.trim(),
-          invoiceNumber,
-          items: billItems,
-          total,
-          createdAt: bill.createdAt,
-          storeName: STORE_NAME,
-        });
-        emailSent = true;
-      } catch (emailErr) {
+      emailSent = true;
+      sendCustomerBillEmail({
+        customerEmail: customerEmail.trim(),
+        invoiceNumber,
+        items: billItems,
+        total,
+        createdAt: bill.createdAt,
+        storeName: STORE_NAME,
+      }).catch((emailErr) => {
         console.error('❌ Customer bill email failed:', emailErr.message);
-      }
+      });
     }
 
     res.status(201).json({
