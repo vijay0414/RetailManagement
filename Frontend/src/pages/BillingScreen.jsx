@@ -18,33 +18,63 @@ const fmtDateTime = () =>
   });
 
 export default function BillingScreen() {
-  const { currentUser, getProductByBarcode, createBill, showToast } = useApp();
+  const { currentUser, products, getProductByBarcode, createBill, showToast } = useApp();
 
   /* ── Camera ─────────────────────────────────────────────────────────── */
   const [cameraActive, setCameraActive] = useState(false);
-  const [cameraError,  setCameraError]  = useState('');
-  const [scanning,     setScanning]     = useState(false);
-  const videoRef  = useRef(null);
+  const [cameraError, setCameraError] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const videoRef = useRef(null);
   const readerRef = useRef(null);
   const streamRef = useRef(null);
 
   /* ── Scan / lookup ──────────────────────────────────────────────────── */
-  const [barcodeInput,   setBarcodeInput]   = useState('');
+  const [barcodeInput, setBarcodeInput] = useState('');
   const [scannedProduct, setScannedProduct] = useState(null);
-  const [scanError,      setScanError]      = useState('');
-  const [lookupLoading,  setLookupLoading]  = useState(false);
-  const [qtyInput,       setQtyInput]       = useState('1');
+  const [scanError, setScanError] = useState('');
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [qtyInput, setQtyInput] = useState('1');
 
   /* ── Cart / bill ────────────────────────────────────────────────────── */
-  const [cart,          setCart]          = useState([]);
+  const [cart, setCart] = useState([]);
   const [customerEmail, setCustomerEmail] = useState('');
-  const [billLoading,   setBillLoading]   = useState(false);
+  const [billLoading, setBillLoading] = useState(false);
   const [billGenerated, setBillGenerated] = useState(null);
   const printRef = useRef(null);
 
+  /* ── Product Search ─────────────────────────────────────────────────── */
+  const [productSearch, setProductSearch] = useState('');
+
+  const filteredProducts = products
+    .filter(p => {
+      if (!productSearch) return false; // Show only when typing, or return true to show all? The user requested "when the biller search...", so showing all by default might be long but useful. Let's show all.
+      const q = productSearch.toLowerCase();
+      return p.name.toLowerCase().includes(q) || p.productId.toLowerCase().includes(q);
+    })
+    .sort((a, b) => {
+      if (!productSearch) return 0;
+      const q = productSearch.toLowerCase();
+      const aStarts = a.name.toLowerCase().startsWith(q) || a.productId.toLowerCase().startsWith(q) ? -1 : 0;
+      const bStarts = b.name.toLowerCase().startsWith(q) || b.productId.toLowerCase().startsWith(q) ? -1 : 0;
+      return aStarts - bStarts;
+    })
+    .slice(0, 10); // keep it tight to avoid crowding
+
+  const handleSelectProduct = (product) => {
+    if (product.stock === 0) {
+      setScanError(`"${product.name}" is out of stock.`);
+      setScannedProduct(null);
+      return;
+    }
+    setScanError('');
+    setScannedProduct(product);
+    setBarcodeInput(product.barcode || '');
+    setQtyInput('1');
+  };
+
   // ── Camera helpers ──────────────────────────────────────────────────
   const stopCamera = useCallback(() => {
-    try { readerRef.current?.reset(); } catch (_) {}
+    try { readerRef.current?.reset(); } catch (_) { }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -65,7 +95,7 @@ export default function BillingScreen() {
       setTimeout(async () => {
         if (!videoRef.current) return;
         videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
+        await videoRef.current.play().catch(() => { });
         readerRef.current = new BrowserMultiFormatReader();
         try {
           await readerRef.current.decodeFromStream(stream, videoRef.current, (result, err) => {
@@ -124,10 +154,10 @@ export default function BillingScreen() {
       }
       return [...prev, {
         productId: scannedProduct.productId,
-        barcode:   scannedProduct.barcode,
-        name:      scannedProduct.name,
+        barcode: scannedProduct.barcode,
+        name: scannedProduct.name,
         qty, price: scannedProduct.price,
-        subtotal:  qty * scannedProduct.price,
+        subtotal: qty * scannedProduct.price,
       }];
     });
     setBarcodeInput(''); setQtyInput('1'); setScannedProduct(null); setScanError('');
@@ -143,11 +173,11 @@ export default function BillingScreen() {
     try {
       const { bill, emailSent } = await createBill(cart, customerEmail.trim());
       setBillGenerated({
-        invoiceNo:  bill.invoiceNo,
-        date:       bill.date || fmtDateTime(),
+        invoiceNo: bill.invoiceNo,
+        date: bill.date || fmtDateTime(),
         billerName: currentUser.name,
-        items:      bill.items,
-        total:      bill.total,
+        items: bill.items,
+        total: bill.total,
       });
       setCart([]);
       setCustomerEmail('');
@@ -186,7 +216,7 @@ export default function BillingScreen() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1 className="page-title"><ShoppingCart size={20}/> Billing Counter</h1>
+        <h1 className="page-title"><ShoppingCart size={20} /> Billing Counter</h1>
         <p className="page-subtitle">Scan a barcode with the camera or enter it manually.</p>
       </div>
 
@@ -197,7 +227,7 @@ export default function BillingScreen() {
           {/* Scanner */}
           <div className="card">
             <div className="card-header">
-              <h2 className="card-title"><ScanLine size={16}/> Scan / Enter Barcode</h2>
+              <h2 className="card-title"><ScanLine size={16} /> Scan / Enter Barcode</h2>
             </div>
 
             {cameraActive && (
@@ -208,32 +238,32 @@ export default function BillingScreen() {
                   <p className="scan-hint">Point at a barcode</p>
                 </div>
                 <button className="btn btn-ghost camera-stop-btn" onClick={stopCamera}>
-                  <CameraOff size={15}/> Stop Camera
+                  <CameraOff size={15} /> Stop Camera
                 </button>
               </div>
             )}
 
             {cameraError === 'denied' && (
               <div className="camera-error-msg">
-                <CameraOff size={18}/>
+                <CameraOff size={18} />
                 <div><strong>Camera access denied.</strong><p>Use manual entry below.</p></div>
               </div>
             )}
             {cameraError === 'unavailable' && (
               <div className="camera-error-msg">
-                <CameraOff size={18}/>
+                <CameraOff size={18} />
                 <div><strong>No camera detected.</strong><p>Use manual entry below.</p></div>
               </div>
             )}
 
             {!cameraActive && (
               <button className="btn btn-outline camera-start-btn" onClick={startCamera} disabled={scanning}>
-                {scanning ? <><span className="spinner-sm"/> Starting camera…</> : <><Camera size={15}/> Start Camera Scanner</>}
+                {scanning ? <><span className="spinner-sm" /> Starting camera…</> : <><Camera size={15} /> Start Camera Scanner</>}
               </button>
             )}
 
             <div className="manual-entry-section">
-              <p className="manual-entry-label"><Search size={13}/> Manual barcode entry</p>
+              <p className="manual-entry-label"><Search size={13} /> Manual barcode entry</p>
               <div className="scan-input-wrap">
                 <input
                   className={`form-input scan-input ${scanError ? 'input-error' : ''}`}
@@ -244,7 +274,7 @@ export default function BillingScreen() {
                   disabled={lookupLoading}
                 />
                 <button className="btn btn-outline" onClick={handleManualLookup} disabled={lookupLoading}>
-                  {lookupLoading ? <span className="spinner-sm"/> : 'Lookup'}
+                  {lookupLoading ? <span className="spinner-sm" /> : 'Lookup'}
                 </button>
               </div>
               {scanError && <p className="field-error">{scanError}</p>}
@@ -252,7 +282,7 @@ export default function BillingScreen() {
 
             {scannedProduct && (
               <div className="scanned-preview">
-                <CheckCircle size={18} className="color-green"/>
+                <CheckCircle size={18} className="color-green" />
                 <div className="scanned-info">
                   <p className="scanned-name">{scannedProduct.name}</p>
                   <p className="scanned-meta">₹{scannedProduct.price} &nbsp;|&nbsp; Stock: {scannedProduct.stock}</p>
@@ -264,16 +294,69 @@ export default function BillingScreen() {
                     onKeyDown={(e) => e.key === 'Enter' && handleAddToCart()} />
                 </div>
                 <button className="btn btn-primary" onClick={handleAddToCart}>
-                  <Plus size={15}/> Add to Bill
+                  <Plus size={15} /> Add to Bill
                 </button>
               </div>
+            )}
+          </div>
+
+          {/* Product Search List */}
+          <div className="card" style={{ marginTop: '16px', marginBottom: '16px' }}>
+            <div className="card-header">
+              <h2 className="card-title"><Search size={16} /> Search Products</h2>
+            </div>
+            <div style={{ padding: '0 16px 16px 16px' }}>
+              <input
+                className="form-input"
+                placeholder="Search by Name or Product ID..."
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+              />
+            </div>
+
+            {productSearch && filteredProducts.length > 0 && (
+              <div className="table-scroll" style={{ maxHeight: '250px' }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th className="text-sm">Product ID</th>
+                      <th>Name</th>
+                      <th className="text-right">Stock</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map(p => (
+                      <tr key={p.productId}>
+                        <td className="mono text-sm text-muted">{p.productId.slice(-6)}</td>
+                        <td className="font-medium">{p.name}</td>
+                        <td className="text-right">
+                          <span className={`badge ${p.stock > 0 ? 'badge-green' : 'badge-red'}`}>{p.stock}</span>
+                        </td>
+                        <td className="text-right">
+                          <button
+                            className="btn btn-primary btn-sm"
+                            disabled={p.stock === 0}
+                            onClick={() => handleSelectProduct(p)}
+                          >
+                            Select
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {productSearch && filteredProducts.length === 0 && (
+              <p className="empty-msg">No products match your search.</p>
             )}
           </div>
 
           {/* Cart */}
           <div className="card">
             <div className="card-header">
-              <h2 className="card-title"><ShoppingCart size={15}/> Current Bill ({cart.length} items)</h2>
+              <h2 className="card-title"><ShoppingCart size={15} /> Current Bill ({cart.length} items)</h2>
               {cart.length > 0 && <button className="btn-text text-red" onClick={() => setCart([])}>Clear All</button>}
             </div>
 
@@ -299,7 +382,7 @@ export default function BillingScreen() {
                           <td className="text-right font-semibold">₹{item.subtotal.toLocaleString()}</td>
                           <td>
                             <button className="icon-btn text-red" onClick={() => handleRemove(item.productId)} title="Remove">
-                              <Trash2 size={14}/>
+                              <Trash2 size={14} />
                             </button>
                           </td>
                         </tr>
@@ -316,7 +399,7 @@ export default function BillingScreen() {
                 {/* Optional customer email */}
                 <div className="form-group mt-3">
                   <label className="form-label">
-                    <Mail size={13}/> Customer Email <span className="text-muted">(optional — sends invoice copy)</span>
+                    <Mail size={13} /> Customer Email <span className="text-muted">(optional — sends invoice copy)</span>
                   </label>
                   <input
                     className="form-input"
@@ -329,8 +412,8 @@ export default function BillingScreen() {
 
                 <button className="btn btn-success btn-block mt-3" onClick={handleGenerateBill} disabled={billLoading}>
                   {billLoading
-                    ? <><span className="spinner-sm"/> Processing…</>
-                    : <><Printer size={16}/> Generate Bill</>}
+                    ? <><span className="spinner-sm" /> Processing…</>
+                    : <><Printer size={16} /> Generate Bill</>}
                 </button>
               </>
             )}
@@ -343,7 +426,7 @@ export default function BillingScreen() {
             <div className="card">
               <div className="card-header">
                 <h2 className="card-title">Invoice</h2>
-                <button className="btn btn-outline" onClick={handlePrint}><Printer size={14}/> Print</button>
+                <button className="btn btn-outline" onClick={handlePrint}><Printer size={14} /> Print</button>
               </div>
               <div ref={printRef} className="invoice-body">
                 <div className="invoice-header-block">
@@ -392,7 +475,7 @@ export default function BillingScreen() {
             </div>
           ) : (
             <div className="card invoice-placeholder">
-              <Printer size={44} className="placeholder-icon"/>
+              <Printer size={44} className="placeholder-icon" />
               <p className="placeholder-text">Generated invoice will appear here.</p>
             </div>
           )}

@@ -10,12 +10,12 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 export default function ReorderPage() {
   const { products, reorderHistory, addReorder, showToast } = useApp();
 
-  const [modalProduct,   setModalProduct]   = useState(null);
-  const [reorderQty,     setReorderQty]     = useState('');
-  const [deliveryDate,   setDeliveryDate]   = useState('');
-  const [feedback,       setFeedback]       = useState('');
-  const [errors,         setErrors]         = useState({});
-  const [placing,        setPlacing]        = useState(false);
+  const [modalProduct, setModalProduct] = useState(null);
+  const [reorderQty, setReorderQty] = useState('');
+  const [deliveryDate, setDeliveryDate] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [errors, setErrors] = useState({});
+  const [placing, setPlacing] = useState(false);
 
   const lowStockItems = products.filter((p) => p.stock < p.reorderThreshold);
 
@@ -32,7 +32,7 @@ export default function ReorderPage() {
     const e = {};
     const qty = parseInt(reorderQty, 10);
     if (!qty || qty <= 0) e.qty = 'Enter a valid quantity.';
-    if (!deliveryDate)    e.deliveryDate = 'Expected delivery date is required.';
+    if (!deliveryDate) e.deliveryDate = 'Expected delivery date is required.';
     return e;
   };
 
@@ -67,7 +67,7 @@ export default function ReorderPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1 className="page-title"><RefreshCw size={20}/> Reorder</h1>
+        <h1 className="page-title"><RefreshCw size={20} /> Reorder</h1>
         <p className="page-subtitle">
           {lowStockItems.length === 0
             ? 'All products are well-stocked — no reorders needed.'
@@ -78,14 +78,15 @@ export default function ReorderPage() {
       {/* ── Low-stock products ─────────────────────────────────────── */}
       <div className="card">
         <div className="card-header">
-          <h2 className="card-title"><AlertTriangle size={15}/> Low Stock Products</h2>
+          <h2 className="card-title"><AlertTriangle size={15} /> Low Stock Products</h2>
         </div>
         {lowStockItems.length === 0 ? (
-          <p className="empty-msg success-msg"><CheckCircle size={14}/> No low-stock items.</p>
+          <p className="empty-msg success-msg"><CheckCircle size={14} /> No low-stock items.</p>
         ) : (
           <div className="table-scroll">
             <table className="data-table">
               <thead><tr>
+                <th className="text-sm">Product ID</th>
                 <th>Barcode</th><th>Product</th><th>Category</th>
                 <th className="text-right">Stock</th>
                 <th className="text-right">Threshold</th>
@@ -94,6 +95,7 @@ export default function ReorderPage() {
               <tbody>
                 {lowStockItems.map((p) => (
                   <tr key={p.id} className="row-low-stock">
+                    <td className="mono text-sm text-muted">{p.productId.slice(-6)}</td>
                     <td className="mono text-sm">{p.barcode}</td>
                     <td className="font-medium">{p.name}</td>
                     <td><span className="category-pill">{p.category}</span></td>
@@ -103,12 +105,12 @@ export default function ReorderPage() {
                     <td className="mono text-sm">{p.supplierContact}</td>
                     <td className="text-sm">
                       {p.supplierEmail
-                        ? <span className="contact-value"><Mail size={12}/> {p.supplierEmail}</span>
+                        ? <span className="contact-value"><Mail size={12} /> {p.supplierEmail}</span>
                         : <span className="text-muted">—</span>}
                     </td>
                     <td>
                       <button className="btn btn-primary btn-sm" onClick={() => openModal(p)}>
-                        <RefreshCw size={13}/> Reorder
+                        <RefreshCw size={13} /> Reorder
                       </button>
                     </td>
                   </tr>
@@ -122,7 +124,7 @@ export default function ReorderPage() {
       {/* ── Reorder history ────────────────────────────────────────── */}
       <div className="card">
         <div className="card-header">
-          <h2 className="card-title"><Clock size={15}/> Reorder History</h2>
+          <h2 className="card-title"><Clock size={15} /> Reorder History</h2>
         </div>
         {reorderHistory.length === 0 ? (
           <p className="empty-msg">No reorders placed yet.</p>
@@ -130,7 +132,9 @@ export default function ReorderPage() {
           <div className="table-scroll">
             <table className="data-table">
               <thead><tr>
-                <th>Date</th><th>Product</th>
+                <th>Date</th>
+                <th className="text-sm">Product ID</th>
+                <th>Product</th>
                 <th className="text-right">Qty</th>
                 <th>Expected Delivery</th>
                 <th>Supplier</th><th>Feedback</th><th>Status</th>
@@ -139,6 +143,7 @@ export default function ReorderPage() {
                 {reorderHistory.map((r) => (
                   <tr key={r.id}>
                     <td className="text-sm">{r.date}</td>
+                    <td className="mono text-sm text-muted">{r.productId.slice(-6)}</td>
                     <td className="font-medium">{r.productName}</td>
                     <td className="text-right">{r.qty}</td>
                     <td className="text-sm">{r.expectedDeliveryDate || '—'}</td>
@@ -163,29 +168,29 @@ export default function ReorderPage() {
           <div className="modal">
             <div className="modal-header">
               <div className="modal-header-icon modal-header-icon--blue">
-                <RefreshCw size={20}/>
+                <RefreshCw size={20} />
               </div>
               <div className="modal-header-text">
                 <h2 className="modal-title">Place Reorder</h2>
                 <p className="modal-subtitle">{modalProduct.name}</p>
               </div>
               <button className="modal-close-btn" onClick={closeModal} disabled={placing}>
-                <X size={18}/>
+                <X size={18} />
               </button>
             </div>
 
             <div className="modal-body">
               {/* Supplier snapshot */}
               <div className="reorder-info-grid">
-                <InfoRow label="Supplier"      value={modalProduct.supplierName} />
-                <InfoRow label="Contact"       value={modalProduct.supplierContact} />
-                <InfoRow label="Email"         value={
+                <InfoRow label="Supplier" value={modalProduct.supplierName} />
+                <InfoRow label="Contact" value={modalProduct.supplierContact} />
+                <InfoRow label="Email" value={
                   modalProduct.supplierEmail
-                    ? <span className="contact-value"><Mail size={12}/> {modalProduct.supplierEmail}</span>
+                    ? <span className="contact-value"><Mail size={12} /> {modalProduct.supplierEmail}</span>
                     : <span className="text-muted">Not set — email won't be sent</span>
                 } />
                 <InfoRow label="Current Stock" value={<span className="badge badge-red">{modalProduct.stock}</span>} />
-                <InfoRow label="Threshold"     value={modalProduct.reorderThreshold} />
+                <InfoRow label="Threshold" value={modalProduct.reorderThreshold} />
               </div>
 
               {/* Quantity */}
@@ -206,7 +211,7 @@ export default function ReorderPage() {
               {/* Expected Delivery Date */}
               <div className="form-group mt-3">
                 <label className="form-label">
-                  <Calendar size={13}/> Expected Delivery Date *
+                  <Calendar size={13} /> Expected Delivery Date *
                 </label>
                 <input
                   className={`form-input ${errors.deliveryDate ? 'input-error' : ''}`}
@@ -237,7 +242,7 @@ export default function ReorderPage() {
 
               {modalProduct.supplierEmail && (
                 <p className="text-sm" style={{ color: 'var(--color-green, #16a34a)', marginTop: 8 }}>
-                  <Mail size={12}/> An automated email will be sent to{' '}
+                  <Mail size={12} /> An automated email will be sent to{' '}
                   <strong>{modalProduct.supplierEmail}</strong>
                 </p>
               )}
@@ -245,12 +250,12 @@ export default function ReorderPage() {
 
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={closeModal} disabled={placing}>
-                <X size={14}/> Cancel
+                <X size={14} /> Cancel
               </button>
               <button className="btn btn-success" onClick={handleReorder} disabled={placing}>
                 {placing
-                  ? <><span className="spinner-sm"/> Placing…</>
-                  : <><CheckCircle size={14}/> Place Reorder</>}
+                  ? <><span className="spinner-sm" /> Placing…</>
+                  : <><CheckCircle size={14} /> Place Reorder</>}
               </button>
             </div>
           </div>
