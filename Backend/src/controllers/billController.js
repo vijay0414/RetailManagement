@@ -7,7 +7,8 @@ const { STORE_NAME } = require('../config/env');
  * Generates an invoice number: INV-<YYYYMMDD>-<random4digits>
  */
 const generateInvoiceNumber = () => {
-  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  const datePart = dateStr.replace(/-/g, '');
   const rand = Math.floor(1000 + Math.random() * 9000);
   return `INV-${datePart}-${rand}`;
 };
@@ -69,11 +70,11 @@ const createBill = async (req, res, next) => {
     // ── Step 2: Build bill items with price + costPrice snapshots ─────────────
     const billItems = resolvedItems.map(({ product, qty }) => ({
       productId: product._id,
-      name:      product.name,
+      name: product.name,
       qty,
-      price:     product.price,
+      price: product.price,
       costPrice: product.costPrice || 0,   // snapshot for profit tracking
-      subtotal:  parseFloat((product.price * qty).toFixed(2)),
+      subtotal: parseFloat((product.price * qty).toFixed(2)),
     }));
 
     const total = parseFloat(
@@ -94,9 +95,9 @@ const createBill = async (req, res, next) => {
     // ── Step 5: Save bill ─────────────────────────────────────────────────────
     const bill = await Bill.create({
       invoiceNumber,
-      items:         billItems,
+      items: billItems,
       total,
-      billedBy:      req.user._id,
+      billedBy: req.user._id,
       customerEmail: customerEmail ? customerEmail.trim().toLowerCase() : '',
     });
 
@@ -108,12 +109,12 @@ const createBill = async (req, res, next) => {
     if (customerEmail && customerEmail.trim()) {
       try {
         await sendCustomerBillEmail({
-          customerEmail:  customerEmail.trim(),
+          customerEmail: customerEmail.trim(),
           invoiceNumber,
-          items:          billItems,
+          items: billItems,
           total,
-          createdAt:      bill.createdAt,
-          storeName:      STORE_NAME,
+          createdAt: bill.createdAt,
+          storeName: STORE_NAME,
         });
         emailSent = true;
       } catch (emailErr) {

@@ -102,10 +102,10 @@ const sendLowStockAlertEmail = async ({
     <table width="100%" cellpadding="0" cellspacing="0"
            style="border:1px solid #e2e8f0;border-radius:6px;
                   overflow:hidden;margin:20px 0;border-collapse:collapse;">
-      ${detailRow('Product Name',      `<strong>${productName}</strong>`)}
-      ${detailRow('Remaining Stock',   `<span style="color:#dc2626;font-weight:700;">${remainingStock} units</span>`)}
+      ${detailRow('Product Name', `<strong>${productName}</strong>`)}
+      ${detailRow('Remaining Stock', `<span style="color:#dc2626;font-weight:700;">${remainingStock} units</span>`)}
       ${detailRow('Reorder Threshold', `${reorderThreshold} units`)}
-      ${detailRow('Your Contact',      supplierContact)}
+      ${detailRow('Your Contact', supplierContact)}
     </table>
 
     <p style="font-size:14px;color:#475569;">
@@ -121,7 +121,7 @@ const sendLowStockAlertEmail = async ({
 
   await transporter.sendMail({
     from: `"${STORE_NAME}" <${EMAIL_USER}>`,
-    to:   supplierEmail,
+    to: supplierEmail,
     subject: `Low Stock Alert - ${productName}`,
     html: htmlShell(`Low Stock Alert — ${productName}`, body),
   });
@@ -169,6 +169,7 @@ const sendSupplierReorderEmail = async ({
   if (!supplierEmail) throw new Error('supplierEmail is required for reorder email');
 
   const deliveryStr = new Date(expectedDeliveryDate).toLocaleDateString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     day: '2-digit', month: 'long', year: 'numeric',
   });
 
@@ -204,15 +205,15 @@ const sendSupplierReorderEmail = async ({
            style="border:1px solid #e2e8f0;border-radius:6px;
                   overflow:hidden;border-collapse:collapse;margin-bottom:24px;">
       ${detailRow('Product Name',
-          `<strong style="font-size:15px;color:#1e293b;">${productName}</strong>`)}
+    `<strong style="font-size:15px;color:#1e293b;">${productName}</strong>`)}
       ${detailRow('Quantity Requested',
-          `<strong style="color:#1d4ed8;font-size:15px;">${quantity} units</strong>`)}
+      `<strong style="color:#1d4ed8;font-size:15px;">${quantity} units</strong>`)}
       ${detailRow('Expected Delivery',
-          `<strong style="color:#1e293b;">${deliveryStr}</strong>`)}
+        `<strong style="color:#1e293b;">${deliveryStr}</strong>`)}
       ${detailRow('Shop',
           `<span style="color:#1e293b;">${shopName}</span>`)}
       ${detailRow('Manager',
-          `<span style="color:#1e293b;">${managerDisplay}</span>`)}
+            `<span style="color:#1e293b;">${managerDisplay}</span>`)}
       ${feedbackSection}
     </table>
 
@@ -228,10 +229,10 @@ const sendSupplierReorderEmail = async ({
     </p>`;
 
   await transporter.sendMail({
-    from:    `"${shopName}" <${EMAIL_USER}>`,
-    to:      supplierEmail,
+    from: `"${shopName}" <${EMAIL_USER}>`,
+    to: supplierEmail,
     subject: `Reorder Request - ${productName}`,
-    html:    htmlShell(`Reorder Request — ${productName}`, body),
+    html: htmlShell(`Reorder Request — ${productName}`, body),
   });
 
   console.log(`📧 Reorder email sent to <${supplierEmail}> for "${productName}" (qty: ${quantity})`);
@@ -260,6 +261,7 @@ const sendCustomerBillEmail = async ({
   if (!customerEmail) throw new Error('customerEmail is required for bill email');
 
   const dateStr = new Date(createdAt).toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     day: '2-digit', month: 'long', year: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: true,
   });
@@ -338,7 +340,7 @@ const sendCustomerBillEmail = async ({
 
   await transporter.sendMail({
     from: `"${storeName}" <${EMAIL_USER}>`,
-    to:   customerEmail,
+    to: customerEmail,
     subject: `Your Invoice #${invoiceNumber} - ${storeName}`,
     html: htmlShell(`Invoice #${invoiceNumber}`, body),
   });
