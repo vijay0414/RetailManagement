@@ -4,18 +4,19 @@ const { FRONTEND_URL } = require('./config/env');
 const { authLimiter, apiLimiter } = require('./middleware/rateLimiter');
 
 // Route imports
-const authRoutes    = require('./routes/authRoutes');
+const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
-const billRoutes    = require('./routes/billRoutes');
+const billRoutes = require('./routes/billRoutes');
 const reorderRoutes = require('./routes/reorderRoutes');
-const alertRoutes   = require('./routes/alertRoutes');
-const userRoutes    = require('./routes/userRoutes');
-const reportRoutes  = require('./routes/reportRoutes');
+const alertRoutes = require('./routes/alertRoutes');
+const userRoutes = require('./routes/userRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 // Middleware imports
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 const app = express();
+app.set('trust proxy', 1); // Trust the reverse proxy (Render) for rate-limiting client IPs
 
 
 const allowedOrigins = FRONTEND_URL
@@ -26,11 +27,11 @@ app.use(
   cors({
     origin: allowedOrigins.length
       ? (incomingOrigin, callback) => {
-          // Allow requests with no Origin header (e.g. curl, Postman, server-to-server)
-          if (!incomingOrigin) return callback(null, true);
-          if (allowedOrigins.includes(incomingOrigin)) return callback(null, true);
-          callback(new Error(`CORS: origin ${incomingOrigin} not allowed`));
-        }
+        // Allow requests with no Origin header (e.g. curl, Postman, server-to-server)
+        if (!incomingOrigin) return callback(null, true);
+        if (allowedOrigins.includes(incomingOrigin)) return callback(null, true);
+        callback(new Error(`CORS: origin ${incomingOrigin} not allowed`));
+      }
       : '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -86,12 +87,12 @@ app.get('/test-email', async (req, res) => {
 });
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
-app.use('/api/auth',    authLimiter, authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/products', apiLimiter, productRoutes);
-app.use('/api/bills',   apiLimiter, billRoutes);
+app.use('/api/bills', apiLimiter, billRoutes);
 app.use('/api/reorders', apiLimiter, reorderRoutes);
-app.use('/api/alerts',  apiLimiter, alertRoutes);
-app.use('/api/users',   apiLimiter, userRoutes);
+app.use('/api/alerts', apiLimiter, alertRoutes);
+app.use('/api/users', apiLimiter, userRoutes);
 app.use('/api/reports', apiLimiter, reportRoutes);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────

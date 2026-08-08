@@ -13,10 +13,10 @@ const { EMAIL_USER, EMAIL_PASS } = require('./env');
  * matches smtp.gmail.com even though we're connecting by IP.
  */
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
-const useSSL    = SMTP_PORT === 465;
+const useSSL = SMTP_PORT === 465;
 
 const transporter = nodemailer.createTransport({
-  host: '74.125.133.108',   // smtp.gmail.com IPv4 — bypasses Render's IPv6 DNS
+  host: 'smtp.gmail.com',   // Use standard hostname instead of hardcoded IP
   port: SMTP_PORT,
   secure: useSSL,
   auth: {
@@ -24,12 +24,8 @@ const transporter = nodemailer.createTransport({
     pass: EMAIL_PASS ? EMAIL_PASS.replace(/\s/g, '') : '',
   },
   connectionTimeout: 15000,
-  greetingTimeout:   10000,
-  socketTimeout:     20000,
-  tls: {
-    servername: 'smtp.gmail.com',  // must match the cert even when connecting by IP
-    rejectUnauthorized: false,
-  },
+  greetingTimeout: 10000,
+  socketTimeout: 20000,
 });
 
 if (EMAIL_USER) {
@@ -39,7 +35,7 @@ if (EMAIL_USER) {
       if (err.code === 'EAUTH' || (err.message || '').toLowerCase().includes('invalid login')) {
         console.warn('    → Wrong App Password. Regenerate at: https://myaccount.google.com/apppasswords');
       } else if (['ETIMEDOUT', 'ECONNREFUSED', 'ESOCKET', 'ENETUNREACH'].includes(err.code)) {
-        console.warn(`    → Network blocked. The hardcoded IP 74.125.133.108:${SMTP_PORT} is unreachable from Render.`);
+        console.warn(`    → Network blocked or timeout on port ${SMTP_PORT}.`);
       }
     } else {
       console.log(`✅ Email transporter ready — port ${SMTP_PORT}, sending as ${EMAIL_USER}`);
