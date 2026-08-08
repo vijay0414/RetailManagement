@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { FRONTEND_URL } = require('./config/env');
+const { authLimiter, apiLimiter } = require('./middleware/rateLimiter');
 
 // Route imports
 const authRoutes    = require('./routes/authRoutes');
@@ -60,13 +61,13 @@ app.get('/health', (req, res) => {
 });
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
-app.use('/api/auth',    authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/bills',   billRoutes);
-app.use('/api/reorders', reorderRoutes);
-app.use('/api/alerts',  alertRoutes);
-app.use('/api/users',   userRoutes);
-app.use('/api/reports', reportRoutes);
+app.use('/api/auth',    authLimiter, authRoutes);
+app.use('/api/products', apiLimiter, productRoutes);
+app.use('/api/bills',   apiLimiter, billRoutes);
+app.use('/api/reorders', apiLimiter, reorderRoutes);
+app.use('/api/alerts',  apiLimiter, alertRoutes);
+app.use('/api/users',   apiLimiter, userRoutes);
+app.use('/api/reports', apiLimiter, reportRoutes);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use(notFound);

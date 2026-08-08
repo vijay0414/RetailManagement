@@ -3,24 +3,24 @@ const StockAlert = require('../models/StockAlert');
 const { sendLowStockAlertEmail } = require('./emailService');
 
 /**
- * Validates stock availability for all items in a bill.
- * Throws an error if any product has insufficient stock.
+ * validateStock
+ *
+ * Checks that all items have sufficient stock WITHOUT touching the DB.
+ * This is a pre-flight check only — actual deduction uses atomic operations.
+ *
  * @param {Array} items - Array of { productId, qty }
  * @returns {Promise<Array>} Resolved product documents for each item
  */
 const validateStock = async (items) => {
-  const resolvedItems = [];
-  const productIds = items.map(item => item.productId);
-
-  // Single DB call to fetch all products
+  const productIds = items.map((item) => item.productId);
   const products = await Product.find({ _id: { $in: productIds } });
 
-  // Map for fast lookups
   const productMap = new Map();
   for (const p of products) {
     productMap.set(p._id.toString(), p);
   }
 
+  const resolvedItems = [];
   for (const item of items) {
     const product = productMap.get(item.productId.toString());
 
@@ -42,120 +42,121 @@ const validateStock = async (items) => {
 };
 
 /**
- * Deducts stock for each item after a bill is validated.
+ * deductStock
  *
- * For each product:
- *   1. Decrement quantity.
- *   2. If new quantity < reorderThreshold AND no pending alert exists yet:
- *      a. Create a StockAlert document.
- *      b. Send a low-stock heads-up email to the supplier (non-blocking).
- *   3. If a pending alert already exists, just update its remainingStock count
- *      (no duplicate email).
+ * Atomically deducts stock for each item using findOneAndUpdate with a
+ * conditional filter ({ quantity: { $gte: qty } }). This prevents overselling
+ * in concurrent billing requests — if two requests race for the last unit,
+ * only one will succeed; the other gets null back and we throw a 409.
+ *
+ * After deduction:
+ *   - If new quantity < reorderThreshold AND no pending alert exists: create alert + send email.
+ *   - If a pending alert already exists: update its remainingStock count only (no duplicate email).
  *
  * @param {Array} resolvedItems - Array of { product, qty } from validateStock
  * @returns {Promise<void>}
  */
 const deductStock = async (resolvedItems) => {
-  const bulkOps = [];
-  const itemsBelowThreshold = [];
+  const updatedProducts = [];
 
+  // ── Atomic per-product deductions ────────────────────────────────────────
   for (const { product, qty } of resolvedItems) {
-    const newQuantity = product.quantity - qty;
+    // The filter ensures quantity won't go negative AND prevents concurrent oversell.
+    // If another request already consumed this stock, findOneAndUpdate returns null.
+    const updated = await Product.findOneAndUpdate(
+      { _id: product._id, quantity: { $gte: qty } },
+      { $inc: { quantity: -qty } },
+      { new: true }              // return the updated document
+    );
 
-    // Add to bulk update operations
-    bulkOps.push({
-      updateOne: {
-        filter: { _id: product._id },
-        update: { $set: { quantity: newQuantity } }
-      }
-    });
-
-    if (newQuantity < product.reorderThreshold) {
-      itemsBelowThreshold.push({ product, newQuantity });
+    if (!updated) {
+      // Race condition: stock was consumed between validateStock and deductStock
+      throw {
+        status: 409,
+        message: `Insufficient stock for "${product.name}" — it may have just been sold. Please try again.`,
+      };
     }
+
+    updatedProducts.push(updated);
   }
 
-  // Execute all stock deductions in one batch
-  if (bulkOps.length > 0) {
-    await Product.bulkWrite(bulkOps);
+  // ── Threshold alerts ──────────────────────────────────────────────────────
+  const itemsBelowThreshold = updatedProducts.filter(
+    (p) => p.quantity < p.reorderThreshold
+  );
+
+  if (itemsBelowThreshold.length === 0) return;
+
+  const thresholdProductIds = itemsBelowThreshold.map((p) => p._id);
+
+  // Single DB call to get all existing pending alerts for these products
+  const existingAlerts = await StockAlert.find({
+    productId: { $in: thresholdProductIds },
+    status: 'pending',
+  });
+
+  const existingAlertsMap = new Map();
+  for (const alert of existingAlerts) {
+    existingAlertsMap.set(alert.productId.toString(), alert);
   }
 
-  // Process threshold alerts if needed
-  if (itemsBelowThreshold.length > 0) {
-    const thresholdProductIds = itemsBelowThreshold.map(i => i.product._id);
+  const newAlerts = [];
+  const updateAlertOps = [];
+  const emailsToSend = [];
 
-    // Single DB call to get all existing pending alerts
-    const existingAlerts = await StockAlert.find({
-      productId: { $in: thresholdProductIds },
-      status: 'pending'
-    });
+  for (const product of itemsBelowThreshold) {
+    const existingAlert = existingAlertsMap.get(product._id.toString());
 
-    const existingAlertsMap = new Map();
-    for (const alert of existingAlerts) {
-      existingAlertsMap.set(alert.productId.toString(), alert);
-    }
-
-    const newAlerts = [];
-    const updateAlerts = [];
-    const emailsToSend = [];
-
-    for (const { product, newQuantity } of itemsBelowThreshold) {
-      const existingAlert = existingAlertsMap.get(product._id.toString());
-
-      if (!existingAlert) {
-        // ── First time this product crosses below threshold ──
-        newAlerts.push({
-          productId: product._id,
-          remainingStock: newQuantity,
-          supplierName: product.supplierName,
-          supplierContact: product.supplierContact,
-          supplierEmail: product.supplierEmail || '',
-          status: 'pending',
-        });
-
-        console.log(
-          `⚠️  Stock Alert created for "${product.name}" — remaining: ${newQuantity}` +
-          ` (threshold: ${product.reorderThreshold})`
-        );
-
-        if (product.supplierEmail) {
-          emailsToSend.push({ product, newQuantity });
-        } else {
-          console.log(
-            `ℹ️  No supplierEmail set for "${product.name}" — skipping low-stock email.`
-          );
-        }
-      } else {
-        // Already have a pending alert — just update the stock count, no new email
-        updateAlerts.push({
-          updateOne: {
-            filter: { _id: existingAlert._id },
-            update: { $set: { remainingStock: newQuantity } }
-          }
-        });
-      }
-    }
-
-    // Execute Alert DB operations
-    if (newAlerts.length > 0) await StockAlert.insertMany(newAlerts);
-    if (updateAlerts.length > 0) await StockAlert.bulkWrite(updateAlerts);
-
-    // Send emails (non-blocking for billing)
-    for (const { product, newQuantity } of emailsToSend) {
-      sendLowStockAlertEmail({
-        supplierEmail: product.supplierEmail,
+    if (!existingAlert) {
+      // First time this product crosses below threshold
+      newAlerts.push({
+        productId: product._id,
+        remainingStock: product.quantity,
         supplierName: product.supplierName,
         supplierContact: product.supplierContact,
-        productName: product.name,
-        remainingStock: newQuantity,
-        reorderThreshold: product.reorderThreshold,
-      }).catch((emailErr) => {
-        console.error(
-          `❌ Low-stock alert email failed for "${product.name}":`,
-          emailErr.message
-        );
+        supplierEmail: product.supplierEmail || '',
+        status: 'pending',
+      });
+
+      console.log(
+        `⚠️  Stock Alert created for "${product.name}" — remaining: ${product.quantity}` +
+        ` (threshold: ${product.reorderThreshold})`
+      );
+
+      if (product.supplierEmail) {
+        emailsToSend.push(product);
+      } else {
+        console.log(`ℹ️  No supplierEmail set for "${product.name}" — skipping low-stock email.`);
+      }
+    } else {
+      // Already have a pending alert — just update the stock count, no duplicate email
+      updateAlertOps.push({
+        updateOne: {
+          filter: { _id: existingAlert._id },
+          update: { $set: { remainingStock: product.quantity } },
+        },
       });
     }
+  }
+
+  if (newAlerts.length > 0)      await StockAlert.insertMany(newAlerts);
+  if (updateAlertOps.length > 0) await StockAlert.bulkWrite(updateAlertOps);
+
+  // Send emails non-blocking — email failure must never break billing
+  for (const product of emailsToSend) {
+    sendLowStockAlertEmail({
+      supplierEmail:    product.supplierEmail,
+      supplierName:     product.supplierName,
+      supplierContact:  product.supplierContact,
+      productName:      product.name,
+      remainingStock:   product.quantity,
+      reorderThreshold: product.reorderThreshold,
+    }).catch((emailErr) => {
+      console.error(
+        `❌ Low-stock alert email failed for "${product.name}":`,
+        emailErr.message
+      );
+    });
   }
 };
 
