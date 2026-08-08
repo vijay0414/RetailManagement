@@ -50,9 +50,19 @@ const createBill = async (req, res, next) => {
       }
     }
 
-    const normalizedItems = items.map((i) => ({
-      productId: i.productId,
-      qty: Number(i.qty),
+    // Consolidate duplicates to avoid redundant db calls and incorrect stock validation
+    const itemMap = new Map();
+    for (const i of items) {
+      const qty = Number(i.qty);
+      if (itemMap.has(i.productId)) {
+        itemMap.set(i.productId, itemMap.get(i.productId) + qty);
+      } else {
+        itemMap.set(i.productId, qty);
+      }
+    }
+    const normalizedItems = Array.from(itemMap.entries()).map(([productId, qty]) => ({
+      productId,
+      qty,
     }));
 
     // ── Step 1: Validate all stock (fails fast, touches nothing) ──────────────

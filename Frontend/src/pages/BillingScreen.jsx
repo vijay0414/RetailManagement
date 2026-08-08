@@ -168,6 +168,7 @@ export default function BillingScreen() {
 
   // ── Generate bill ───────────────────────────────────────────────────
   const handleGenerateBill = async () => {
+    if (billLoading) return;
     if (!cart.length) { showToast('Cart is empty.', 'error'); return; }
     setBillLoading(true);
     try {

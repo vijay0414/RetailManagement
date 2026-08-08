@@ -10,9 +10,19 @@ const { sendLowStockAlertEmail } = require('./emailService');
  */
 const validateStock = async (items) => {
   const resolvedItems = [];
+  const productIds = items.map(item => item.productId);
+
+  // Single DB call to fetch all products
+  const products = await Product.find({ _id: { $in: productIds } });
+
+  // Map for fast lookups
+  const productMap = new Map();
+  for (const p of products) {
+    productMap.set(p._id.toString(), p);
+  }
 
   for (const item of items) {
-    const product = await Product.findById(item.productId);
+    const product = productMap.get(item.productId.toString());
 
     if (!product) {
       throw { status: 404, message: `Product with ID ${item.productId} not found` };
@@ -46,21 +56,55 @@ const validateStock = async (items) => {
  * @returns {Promise<void>}
  */
 const deductStock = async (resolvedItems) => {
+  const bulkOps = [];
+  const itemsBelowThreshold = [];
+
   for (const { product, qty } of resolvedItems) {
     const newQuantity = product.quantity - qty;
-    product.quantity = newQuantity;
-    await product.save();
+
+    // Add to bulk update operations
+    bulkOps.push({
+      updateOne: {
+        filter: { _id: product._id },
+        update: { $set: { quantity: newQuantity } }
+      }
+    });
 
     if (newQuantity < product.reorderThreshold) {
-      // Check for an existing pending alert to avoid duplicate alerts + emails
-      const existingAlert = await StockAlert.findOne({
-        productId: product._id,
-        status: 'pending',
-      });
+      itemsBelowThreshold.push({ product, newQuantity });
+    }
+  }
+
+  // Execute all stock deductions in one batch
+  if (bulkOps.length > 0) {
+    await Product.bulkWrite(bulkOps);
+  }
+
+  // Process threshold alerts if needed
+  if (itemsBelowThreshold.length > 0) {
+    const thresholdProductIds = itemsBelowThreshold.map(i => i.product._id);
+
+    // Single DB call to get all existing pending alerts
+    const existingAlerts = await StockAlert.find({
+      productId: { $in: thresholdProductIds },
+      status: 'pending'
+    });
+
+    const existingAlertsMap = new Map();
+    for (const alert of existingAlerts) {
+      existingAlertsMap.set(alert.productId.toString(), alert);
+    }
+
+    const newAlerts = [];
+    const updateAlerts = [];
+    const emailsToSend = [];
+
+    for (const { product, newQuantity } of itemsBelowThreshold) {
+      const existingAlert = existingAlertsMap.get(product._id.toString());
 
       if (!existingAlert) {
         // ── First time this product crosses below threshold ──
-        await StockAlert.create({
+        newAlerts.push({
           productId: product._id,
           remainingStock: newQuantity,
           supplierName: product.supplierName,
@@ -74,23 +118,8 @@ const deductStock = async (resolvedItems) => {
           ` (threshold: ${product.reorderThreshold})`
         );
 
-        // Send heads-up email to supplier
         if (product.supplierEmail) {
-          try {
-            await sendLowStockAlertEmail({
-              supplierEmail: product.supplierEmail,
-              supplierName: product.supplierName,
-              supplierContact: product.supplierContact,
-              productName: product.name,
-              remainingStock: newQuantity,
-              reorderThreshold: product.reorderThreshold,
-            });
-          } catch (emailErr) {
-            console.error(
-              `❌ Low-stock alert email failed for "${product.name}":`,
-              emailErr.message
-            );
-          }
+          emailsToSend.push({ product, newQuantity });
         } else {
           console.log(
             `ℹ️  No supplierEmail set for "${product.name}" — skipping low-stock email.`
@@ -98,8 +127,35 @@ const deductStock = async (resolvedItems) => {
         }
       } else {
         // Already have a pending alert — just update the stock count, no new email
-        existingAlert.remainingStock = newQuantity;
-        await existingAlert.save();
+        updateAlerts.push({
+          updateOne: {
+            filter: { _id: existingAlert._id },
+            update: { $set: { remainingStock: newQuantity } }
+          }
+        });
+      }
+    }
+
+    // Execute Alert DB operations
+    if (newAlerts.length > 0) await StockAlert.insertMany(newAlerts);
+    if (updateAlerts.length > 0) await StockAlert.bulkWrite(updateAlerts);
+
+    // Send emails (non-blocking for billing, but inside try/catch)
+    for (const { product, newQuantity } of emailsToSend) {
+      try {
+        await sendLowStockAlertEmail({
+          supplierEmail: product.supplierEmail,
+          supplierName: product.supplierName,
+          supplierContact: product.supplierContact,
+          productName: product.name,
+          remainingStock: newQuantity,
+          reorderThreshold: product.reorderThreshold,
+        });
+      } catch (emailErr) {
+        console.error(
+          `❌ Low-stock alert email failed for "${product.name}":`,
+          emailErr.message
+        );
       }
     }
   }
