@@ -140,23 +140,21 @@ const deductStock = async (resolvedItems) => {
     if (newAlerts.length > 0) await StockAlert.insertMany(newAlerts);
     if (updateAlerts.length > 0) await StockAlert.bulkWrite(updateAlerts);
 
-    // Send emails (non-blocking for billing, but inside try/catch)
+    // Send emails (non-blocking for billing)
     for (const { product, newQuantity } of emailsToSend) {
-      try {
-        await sendLowStockAlertEmail({
-          supplierEmail: product.supplierEmail,
-          supplierName: product.supplierName,
-          supplierContact: product.supplierContact,
-          productName: product.name,
-          remainingStock: newQuantity,
-          reorderThreshold: product.reorderThreshold,
-        });
-      } catch (emailErr) {
+      sendLowStockAlertEmail({
+        supplierEmail: product.supplierEmail,
+        supplierName: product.supplierName,
+        supplierContact: product.supplierContact,
+        productName: product.name,
+        remainingStock: newQuantity,
+        reorderThreshold: product.reorderThreshold,
+      }).catch((emailErr) => {
         console.error(
           `❌ Low-stock alert email failed for "${product.name}":`,
           emailErr.message
         );
-      }
+      });
     }
   }
 };

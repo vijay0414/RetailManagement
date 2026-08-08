@@ -54,8 +54,8 @@ export const productApi = {
 
 // ─── Bills ─────────────────────────────────────────────────────────────────
 export const billApi = {
-  /** Body: { items: [{ productId, qty }], customerEmail? } */
-  create: (items, customerEmail) => post('/bills', { items, customerEmail: customerEmail || '' }),
+  /** Body: { items: [{ productId, qty }] } */
+  create: (items) => post('/bills', { items }),
   getAll: () => get('/bills'),
   getById: (id) => get(`/bills/${id}`),
 };

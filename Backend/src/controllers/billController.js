@@ -1,6 +1,5 @@
 const Bill = require('../models/Bill');
 const { validateStock, deductStock } = require('../services/stockService');
-const { sendCustomerBillEmail } = require('../services/emailService');
 const { STORE_NAME } = require('../config/env');
 
 /**
@@ -22,7 +21,7 @@ const generateInvoiceNumber = () => {
  */
 const createBill = async (req, res, next) => {
   try {
-    const { items, customerEmail } = req.body;
+    const { items } = req.body;
 
     // ── Validate items array ──────────────────────────────────────────────────
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -108,34 +107,14 @@ const createBill = async (req, res, next) => {
       items: billItems,
       total,
       billedBy: req.user._id,
-      customerEmail: customerEmail ? customerEmail.trim().toLowerCase() : '',
     });
 
     const populatedBill = await Bill.findById(bill._id)
       .populate('billedBy', 'username employeeId role');
 
-    // ── Step 6: Email invoice to customer ─────────────────────
-    let emailSent = false;
-    if (customerEmail && customerEmail.trim()) {
-      try {
-        await sendCustomerBillEmail({
-          customerEmail: customerEmail.trim(),
-          invoiceNumber,
-          items: billItems,
-          total,
-          createdAt: bill.createdAt,
-          storeName: STORE_NAME,
-        });
-        emailSent = true;
-      } catch (emailErr) {
-        console.error('❌ Customer bill email failed:', emailErr.message);
-      }
-    }
-
     res.status(201).json({
       success: true,
       message: 'Bill created successfully.',
-      emailSent,
       data: populatedBill,
     });
   } catch (error) {

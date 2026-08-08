@@ -37,7 +37,6 @@ export default function BillingScreen() {
 
   /* ── Cart / bill ────────────────────────────────────────────────────── */
   const [cart, setCart] = useState([]);
-  const [customerEmail, setCustomerEmail] = useState('');
   const [billLoading, setBillLoading] = useState(false);
   const [billGenerated, setBillGenerated] = useState(null);
   const printRef = useRef(null);
@@ -172,7 +171,7 @@ export default function BillingScreen() {
     if (!cart.length) { showToast('Cart is empty.', 'error'); return; }
     setBillLoading(true);
     try {
-      const { bill, emailSent } = await createBill(cart, customerEmail.trim());
+      const { bill } = await createBill(cart);
       setBillGenerated({
         invoiceNo: bill.invoiceNo,
         date: bill.date || fmtDateTime(),
@@ -181,14 +180,8 @@ export default function BillingScreen() {
         total: bill.total,
       });
       setCart([]);
-      setCustomerEmail('');
 
-      let msg = `Bill ${bill.invoiceNo} generated!`;
-      if (customerEmail.trim()) {
-        msg += emailSent ? ' Invoice emailed to customer.' : '';
-        // silent if emailSent is false — don't alarm biller
-      }
-      showToast(msg);
+      showToast(`Bill ${bill.invoiceNo} generated successfully!`);
     } catch (err) {
       showToast(err.message || 'Failed to generate bill.', 'error');
     } finally {
@@ -395,20 +388,6 @@ export default function BillingScreen() {
                 <div className="cart-footer">
                   <span className="total-label">Total Amount</span>
                   <span className="total-amount">₹{total.toLocaleString()}</span>
-                </div>
-
-                {/* Optional customer email */}
-                <div className="form-group mt-3">
-                  <label className="form-label">
-                    <Mail size={13} /> Customer Email <span className="text-muted">(optional — sends invoice copy)</span>
-                  </label>
-                  <input
-                    className="form-input"
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder="customer@example.com"
-                  />
                 </div>
 
                 <button className="btn btn-success btn-block mt-3" onClick={handleGenerateBill} disabled={billLoading}>

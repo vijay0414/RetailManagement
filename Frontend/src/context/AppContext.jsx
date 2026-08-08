@@ -150,17 +150,17 @@ export function AppProvider({ children }) {
 
   /**
    * createBill — sends cart items to backend.
-   * Returns { bill, emailSent } so the caller can show the right toast.
+   * Returns the bill so the caller can show the right toast.
    */
-  const createBill = useCallback(async (cartItems, customerEmail) => {
+  const createBill = useCallback(async (cartItems) => {
     const items = cartItems.map((i) => ({ productId: i.productId, qty: i.qty }));
-    const res = await billApi.create(items, customerEmail);
+    const res = await billApi.create(items);
     const bill = normalizeBill(res.data);
     setBills((prev) => [bill, ...prev]);
     await loadProducts();               // refresh stock counts
     await loadTodayStats();             // refresh revenue card
     await loadProfitStats();
-    return { bill, emailSent: res.emailSent };
+    return { bill };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const todaysBills = useCallback(() => {
