@@ -12,7 +12,7 @@ const { EMAIL_USER, EMAIL_PASS } = require('./env');
  * We also set the `tls.servername` so TLS certificate validation still
  * matches smtp.gmail.com even though we're connecting by IP.
  */
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || '465', 10);
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
 const useSSL = SMTP_PORT === 465;
 
 const transporter = nodemailer.createTransport({
@@ -23,6 +23,7 @@ const transporter = nodemailer.createTransport({
     user: EMAIL_USER,
     pass: EMAIL_PASS ? EMAIL_PASS.replace(/\s/g, '') : '',
   },
+  family: 4, // force IPv4 to prevent ENETUNREACH on IPv6-restricted hosts
   connectionTimeout: 15000,
   greetingTimeout: 10000,
   socketTimeout: 20000,
