@@ -104,20 +104,22 @@ const createBill = async (req, res, next) => {
     const populatedBill = await Bill.findById(bill._id)
       .populate('billedBy', 'username employeeId role');
 
-    // ── Step 6: Email invoice to customer (non-blocking) ─────────────────────
+    // ── Step 6: Email invoice to customer ─────────────────────
     let emailSent = false;
     if (customerEmail && customerEmail.trim()) {
-      emailSent = true;
-      sendCustomerBillEmail({
-        customerEmail: customerEmail.trim(),
-        invoiceNumber,
-        items: billItems,
-        total,
-        createdAt: bill.createdAt,
-        storeName: STORE_NAME,
-      }).catch((emailErr) => {
+      try {
+        await sendCustomerBillEmail({
+          customerEmail: customerEmail.trim(),
+          invoiceNumber,
+          items: billItems,
+          total,
+          createdAt: bill.createdAt,
+          storeName: STORE_NAME,
+        });
+        emailSent = true;
+      } catch (emailErr) {
         console.error('❌ Customer bill email failed:', emailErr.message);
-      });
+      }
     }
 
     res.status(201).json({

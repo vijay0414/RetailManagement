@@ -78,23 +78,25 @@ const placeReorder = async (req, res, next) => {
       .populate('productId', 'name barcode category supplierName supplierEmail')
       .populate('requestedBy', 'username employeeId contactNumber');
 
-    // ── Send reorder email to supplier (non-blocking) ─────────────────────
+    // ── Send reorder email to supplier ─────────────────────
     let emailSent = false;
     if (product.supplierEmail) {
-      emailSent = true;
-      sendSupplierReorderEmail({
-        supplierEmail: product.supplierEmail,
-        supplierName: product.supplierName,   // used only in greeting line
-        shopName: STORE_NAME,
-        productName: product.name,
-        quantity: Number(quantity),
-        expectedDeliveryDate: deliveryDate,
-        managerName,
-        managerContact,
-        managerFeedback: managerFeedback || '',
-      }).catch((emailErr) => {
+      try {
+        await sendSupplierReorderEmail({
+          supplierEmail: product.supplierEmail,
+          supplierName: product.supplierName,
+          shopName: STORE_NAME,
+          productName: product.name,
+          quantity: Number(quantity),
+          expectedDeliveryDate: deliveryDate,
+          managerName,
+          managerContact,
+          managerFeedback: managerFeedback || '',
+        });
+        emailSent = true;
+      } catch (emailErr) {
         console.error('❌ Reorder email failed:', emailErr.message);
-      });
+      }
     } else {
       console.log(`ℹ️  No supplierEmail for "${product.name}" — reorder email skipped.`);
     }

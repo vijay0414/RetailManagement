@@ -368,8 +368,6 @@ body{
 .data-table td{padding:10px 13px;border-bottom:1px solid var(--gray-100)}
 .data-table tbody tr:last-child td{border-bottom:none}
 .data-table tbody tr:hover{background:var(--gray-50)}
-.row-low-stock{background:#fff7f7!important}
-.row-low-stock:hover{background:#fff0f0!important}
 .total-row td{font-weight:700;font-size:14px;background:var(--blue-50)}
 .text-right{text-align:right}
 .text-muted{color:var(--gray-400)}

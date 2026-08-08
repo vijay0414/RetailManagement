@@ -8,7 +8,7 @@ const STATUS_COLORS = { Placed: 'badge-blue', Delivered: 'badge-green', Cancelle
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export default function ReorderPage() {
-  const { products, reorderHistory, addReorder, showToast } = useApp();
+  const { products, reorderHistory, addReorder, markReorderReceived, showToast } = useApp();
 
   const [modalProduct, setModalProduct] = useState(null);
   const [reorderQty, setReorderQty] = useState('');
@@ -57,10 +57,19 @@ export default function ReorderPage() {
 
       showToast(`Reorder placed for ${modalProduct.name} (qty: ${reorderQty}). ${emailNote}`);
       setModalProduct(null);
+      setPlacing(false);
     } catch (err) {
       showToast(err.message || 'Failed to place reorder.', 'error');
-    } finally {
       setPlacing(false);
+    }
+  };
+
+  const handleMarkReceived = async (id) => {
+    try {
+      await markReorderReceived(id);
+      showToast('Order marked as received and stock updated!');
+    } catch (err) {
+      showToast(err.message || 'Failed to mark as received.', 'error');
     }
   };
 
@@ -138,6 +147,7 @@ export default function ReorderPage() {
                 <th className="text-right">Qty</th>
                 <th>Expected Delivery</th>
                 <th>Supplier</th><th>Feedback</th><th>Status</th>
+                <th>Actions</th>
               </tr></thead>
               <tbody>
                 {reorderHistory.map((r) => (
@@ -153,6 +163,16 @@ export default function ReorderPage() {
                       <span className={`badge ${STATUS_COLORS[r.status] || 'badge-green'}`}>
                         {r.status}
                       </span>
+                    </td>
+                    <td>
+                      {r.status === 'Placed' && (
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => handleMarkReceived(r.id)}
+                        >
+                          <CheckCircle size={13} /> Order Received
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

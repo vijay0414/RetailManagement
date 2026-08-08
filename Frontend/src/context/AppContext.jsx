@@ -194,6 +194,14 @@ export function AppProvider({ children }) {
     return { reorder: entry, emailSent: res.emailSent };
   }, []);
 
+  const markReorderReceived = useCallback(async (reorderId) => {
+    const res = await reorderApi.markReceived(reorderId);
+    const entry = normalizeReorder(res.data);
+    setReorderHistory((prev) => prev.map((r) => r.id === entry.id ? entry : r));
+    await loadProducts();
+    return entry;
+  }, [loadProducts]);
+
   // ─────────────────────────────────────────────────────────────────────────
   // Stock Alerts (polled every 5 s, manager only)
   // ─────────────────────────────────────────────────────────────────────────
@@ -291,7 +299,7 @@ export function AppProvider({ children }) {
       // stock alerts
       stockAlerts, informAlert, dismissStockAlert,
       // reorders
-      reorderHistory, addReorder, loadReorders,
+      reorderHistory, addReorder, loadReorders, markReorderReceived,
       // user management
       billers, createBiller, loadBillers,
       // reports
