@@ -15,9 +15,13 @@ services:
         value: "PLACEHOLDER_MONGO_URI"
       - key: JWT_SECRET
         generateValue: true
-      - key: EMAIL_USER
-        value: "PLACEHOLDER_EMAIL"
-      - key: EMAIL_PASS
-        value: "PLACEHOLDER_PASSWORD"
+      - key: EMAILJS_SERVICE_ID
+        value: "PLACEHOLDER_SERVICE_ID"
+      - key: EMAILJS_TEMPLATE_ID
+        value: "PLACEHOLDER_TEMPLATE_ID"
+      - key: EMAILJS_PUBLIC_KEY
+        value: "PLACEHOLDER_PUBLIC_KEY"
+      - key: EMAILJS_PRIVATE_KEY
+        value: "PLACEHOLDER_PRIVATE_KEY"
       - key: STORE_NAME
         value: "StockSense Store"

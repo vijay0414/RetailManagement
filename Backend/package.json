@@ -9,6 +9,7 @@
     "seed": "node seed.js"
   },
   "dependencies": {
+    "@emailjs/nodejs": "^5.0.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

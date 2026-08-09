@@ -13,7 +13,9 @@ module.exports = {
   MONGO_URI: requireEnv('MONGO_URI'),
   JWT_SECRET: requireEnv('JWT_SECRET'),
   FRONTEND_URL: requireEnv('FRONTEND_URL'),
-  RESEND_API_KEY: process.env.RESEND_API_KEY,
-  EMAIL_FROM: process.env.EMAIL_FROM || 'StockSense <onboarding@resend.dev>',
+  EMAILJS_SERVICE_ID: process.env.EMAILJS_SERVICE_ID,
+  EMAILJS_TEMPLATE_ID: process.env.EMAILJS_TEMPLATE_ID,
+  EMAILJS_PUBLIC_KEY: process.env.EMAILJS_PUBLIC_KEY,
+  EMAILJS_PRIVATE_KEY: process.env.EMAILJS_PRIVATE_KEY,
   STORE_NAME: process.env.STORE_NAME || 'StockSense Store',
 };
