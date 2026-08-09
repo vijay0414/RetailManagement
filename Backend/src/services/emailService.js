@@ -14,48 +14,34 @@
  * SMTP errors that are common after cold-start on Render.
  */
 
-const transporter = require('../config/mailer');
-const { EMAIL_USER, STORE_NAME } = require('../config/env');
+const { Resend } = require('resend');
+const { RESEND_API_KEY, EMAIL_FROM, STORE_NAME } = require('../config/env');
 
-// ─── Retry config ─────────────────────────────────────────────────────────────
-const MAX_RETRIES = 3;
-const RETRY_BASE_MS = 1000; // 1 s, 2 s, 4 s
+const resend = new Resend(RESEND_API_KEY);
 
 /**
- * sendWithRetry — wraps transporter.sendMail with exponential back-off retries.
- * Only retries on transient errors (connection refused, ETIMEDOUT, ECONNRESET).
- * Permanent errors (invalid address, auth failure) are thrown immediately.
+ * sendEmail — Reusable wrapper for Resend API
  */
-const TRANSIENT_ERRORS = ['ETIMEDOUT', 'ECONNRESET', 'ECONNREFUSED', 'ESOCKET', 'ENOTFOUND'];
+const sendEmail = async ({ to, subject, html }, label) => {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM || `"${STORE_NAME}" <onboarding@resend.dev>`,
+      to,
+      subject,
+      html,
+    });
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-const sendWithRetry = async (mailOptions, label) => {
-  let lastErr;
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const info = await transporter.sendMail(mailOptions);
-      if (attempt > 1) {
-        console.log(`📧 [${label}] Sent on attempt ${attempt}.`);
-      }
-      return info;
-    } catch (err) {
-      lastErr = err;
-      const isTransient = TRANSIENT_ERRORS.some((code) => err.code === code || (err.message || '').includes(code));
-      if (!isTransient) {
-        // Auth failure or bad address — no point retrying
-        console.error(`❌ [${label}] Permanent email error: ${err.message}`);
-        throw err;
-      }
-      if (attempt < MAX_RETRIES) {
-        const delay = RETRY_BASE_MS * Math.pow(2, attempt - 1);
-        console.warn(`⚠️  [${label}] Transient email error (attempt ${attempt}/${MAX_RETRIES}), retrying in ${delay}ms… ${err.message}`);
-        await sleep(delay);
-      }
+    if (error) {
+      console.error(`❌ [${label}] Resend API error:`, error.message);
+      throw new Error(error.message);
     }
+
+    console.log(`📧 [${label}] Successfully dispatched via Resend (ID: ${data.id})`);
+    return { success: true, data };
+  } catch (err) {
+    console.error(`❌ [${label}] Unexpected email error:`, err.message);
+    throw err;
   }
-  console.error(`❌ [${label}] All ${MAX_RETRIES} attempts failed: ${lastErr.message}`);
-  throw lastErr;
 };
 
 // ─── Input sanitizer — strips HTML tags to prevent injection in email templates ─
@@ -142,9 +128,9 @@ const sendLowStockAlertEmail = async ({
   if (!supplierEmail) throw new Error('supplierEmail is required for low-stock alert email');
 
   // Sanitize all user-sourced values before embedding in HTML
-  const sName    = sanitize(supplierName);
+  const sName = sanitize(supplierName);
   const sContact = sanitize(supplierContact);
-  const pName    = sanitize(productName);
+  const pName = sanitize(productName);
 
   const body = `
     <p style="font-size:15px;color:#1e293b;margin-top:0;">
@@ -175,9 +161,8 @@ const sendLowStockAlertEmail = async ({
       — ${sanitize(STORE_NAME)} Inventory Team
     </p>`;
 
-  await sendWithRetry(
+  await sendEmail(
     {
-      from: `"${STORE_NAME}" <${EMAIL_USER}>`,
       to: supplierEmail,
       subject: `Low Stock Alert - ${productName}`,
       html: htmlShell(`Low Stock Alert — ${productName}`, body),
@@ -217,12 +202,12 @@ const sendSupplierReorderEmail = async ({
   if (!supplierEmail) throw new Error('supplierEmail is required for reorder email');
 
   // Sanitize all user-sourced values
-  const sName          = sanitize(supplierName);
-  const sShop          = sanitize(shopName);
-  const pName          = sanitize(productName);
-  const mName          = sanitize(managerName);
-  const mContact       = sanitize(managerContact);
-  const mFeedback      = managerFeedback ? sanitize(managerFeedback.trim()) : '';
+  const sName = sanitize(supplierName);
+  const sShop = sanitize(shopName);
+  const pName = sanitize(productName);
+  const mName = sanitize(managerName);
+  const mContact = sanitize(managerContact);
+  const mFeedback = managerFeedback ? sanitize(managerFeedback.trim()) : '';
 
   const deliveryStr = new Date(expectedDeliveryDate).toLocaleDateString('en-IN', {
     timeZone: 'Asia/Kolkata',
@@ -257,11 +242,11 @@ const sendSupplierReorderEmail = async ({
     <table width="100%" cellpadding="0" cellspacing="0"
            style="border:1px solid #e2e8f0;border-radius:6px;
                   overflow:hidden;border-collapse:collapse;margin-bottom:24px;">
-      ${detailRow('Product Name',       `<strong style="font-size:15px;color:#1e293b;">${pName}</strong>`)}
+      ${detailRow('Product Name', `<strong style="font-size:15px;color:#1e293b;">${pName}</strong>`)}
       ${detailRow('Quantity Requested', `<strong style="color:#1d4ed8;font-size:15px;">${Number(quantity)} units</strong>`)}
-      ${detailRow('Expected Delivery',  `<strong style="color:#1e293b;">${deliveryStr}</strong>`)}
-      ${detailRow('Shop',               `<span style="color:#1e293b;">${sShop}</span>`)}
-      ${detailRow('Manager',            `<span style="color:#1e293b;">${managerDisplay}</span>`)}
+      ${detailRow('Expected Delivery', `<strong style="color:#1e293b;">${deliveryStr}</strong>`)}
+      ${detailRow('Shop', `<span style="color:#1e293b;">${sShop}</span>`)}
+      ${detailRow('Manager', `<span style="color:#1e293b;">${managerDisplay}</span>`)}
       ${feedbackSection}
     </table>
 
@@ -276,9 +261,8 @@ const sendSupplierReorderEmail = async ({
       — ${sShop} Procurement Team
     </p>`;
 
-  await sendWithRetry(
+  await sendEmail(
     {
-      from: `"${shopName}" <${EMAIL_USER}>`,
       to: supplierEmail,
       subject: `Reorder Request - ${productName}`,
       html: htmlShell(`Reorder Request — ${productName}`, body),
@@ -389,9 +373,8 @@ const sendCustomerBillEmail = async ({
       Please keep this email as your purchase receipt.
     </p>`;
 
-  await sendWithRetry(
+  await sendEmail(
     {
-      from: `"${storeName}" <${EMAIL_USER}>`,
       to: customerEmail,
       subject: `Your Invoice #${invoiceNumber} - ${storeName}`,
       html: htmlShell(`Invoice #${invoiceNumber}`, body),

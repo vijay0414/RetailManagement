@@ -61,30 +61,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ─── Email Diagnostics (remove after confirming email works in production) ────
-// Hit GET /test-email?to=your@email.com to verify SMTP is working on Render.
-app.get('/test-email', async (req, res) => {
-  const transporter = require('./config/mailer');
-  const { EMAIL_USER } = require('./config/env');
-  const to = req.query.to || EMAIL_USER;
 
-  try {
-    await transporter.sendMail({
-      from: `"StockSense Test" <${EMAIL_USER}>`,
-      to,
-      subject: 'StockSense — SMTP Test',
-      text: `SMTP is working. Sent at ${new Date().toISOString()} from Render.`,
-    });
-    res.json({ success: true, message: `Test email sent to ${to}` });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: err.code || err.name,
-      message: err.message,
-      detail: 'Check Render logs for full stack trace.',
-    });
-  }
-});
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoutes);
