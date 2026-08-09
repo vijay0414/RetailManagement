@@ -77,6 +77,7 @@ const sendSupplierReorderEmail = async ({
   quantity,
   expectedDeliveryDate,
   managerName,
+  managerEmail,
   managerContact,
   managerFeedback,
 }) => {
@@ -90,6 +91,7 @@ const sendSupplierReorderEmail = async ({
   const result = await sendEmail(
     {
       to_email: supplierEmail,
+      reply_to: managerEmail || 'stocksense@example.com',
       supplier_name: supplierName,
       product_name: productName,
       quantity: quantity,

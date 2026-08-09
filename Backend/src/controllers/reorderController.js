@@ -59,6 +59,7 @@ const placeReorder = async (req, res, next) => {
     const manager = await User.findById(req.user._id);
     const managerName = manager?.username || req.user.username || 'Manager';
     const managerContact = manager?.contactNumber || '';
+    const managerEmail = manager?.email || req.user.email || 'noreply@stocksense.com';
 
     // ── Create ReorderRequest ─────────────────────────────────────────────
     const reorder = await ReorderRequest.create({
@@ -90,6 +91,7 @@ const placeReorder = async (req, res, next) => {
           quantity: Number(quantity),
           expectedDeliveryDate: deliveryDate,
           managerName,
+          managerEmail,
           managerContact,
           managerFeedback: managerFeedback || '',
         });
