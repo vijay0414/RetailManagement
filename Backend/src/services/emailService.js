@@ -21,24 +21,18 @@ emailjs.init({
 /**
  * sendEmail — Reusable wrapper for EmailJS API
  */
-async function sendEmail({ to, subject, message, templateParams = {} }, label) {
+async function sendEmail(templateParams, label) {
   try {
     const response = await emailjs.send(
       EMAILJS_SERVICE_ID,
       EMAILJS_TEMPLATE_ID,
-      {
-        to_email: to,
-        subject: subject,
-        message: message,
-        store_name: STORE_NAME,
-        ...templateParams,
-      }
+      templateParams
     );
     console.log(`📧 [${label}] Successfully dispatched via EmailJS (status: ${response.status})`);
     return { success: true, data: response };
   } catch (err) {
     console.error(`❌ [${label}] EmailJS send error:`, err.message || err.text || err);
-    throw new Error(err.message || 'EmailJS failure');
+    return { success: false, error: err.message || err };
   }
 }
 
@@ -55,22 +49,21 @@ const sendLowStockAlertEmail = async ({
 }) => {
   if (!supplierEmail) throw new Error('supplierEmail is required for low-stock alert email');
 
-  await sendEmail(
+  const result = await sendEmail(
     {
-      to: supplierEmail,
-      subject: `Low Stock Alert - ${productName}`,
-      message: `Heads-up! The product "${productName}" has dropped to ${remainingStock} units (Threshold: ${reorderThreshold}). A formal reorder request will follow.`,
-      templateParams: {
-        product_name: productName,
-        remaining_stock: remainingStock,
-        threshold: reorderThreshold,
-        supplier_name: supplierName,
-        supplier_contact: supplierContact,
-        type: 'Low Stock Alert',
-      },
+      to_email: supplierEmail,
+      supplier_name: supplierName,
+      supplier_contact: supplierContact,
+      product_name: productName,
+      remaining_stock: remainingStock,
+      threshold: reorderThreshold,
+      shop_name: STORE_NAME,
+      type: 'Low Stock Alert',
     },
     `LowStock:${productName}`
   );
+
+  if (!result.success) throw new Error(result.error);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,26 +87,22 @@ const sendSupplierReorderEmail = async ({
     day: '2-digit', month: 'long', year: 'numeric',
   });
 
-  const msg = `${shopName} is placing a formal reorder request for ${quantity} units of "${productName}". Expected delivery: ${deliveryStr}.`;
-
-  await sendEmail(
+  const result = await sendEmail(
     {
-      to: supplierEmail,
-      subject: `Reorder Request - ${productName}`,
-      message: msg,
-      templateParams: {
-        product_name: productName,
-        quantity: quantity,
-        expected_delivery: deliveryStr,
-        supplier_name: supplierName,
-        manager_name: managerName,
-        manager_contact: managerContact,
-        manager_feedback: managerFeedback || 'None',
-        type: 'Reorder Request',
-      },
+      to_email: supplierEmail,
+      supplier_name: supplierName,
+      product_name: productName,
+      quantity: quantity,
+      expected_delivery: deliveryStr,
+      shop_name: STORE_NAME,
+      manager_name: managerName,
+      manager_contact: managerContact,
+      manager_note: managerFeedback || '—',
     },
     `Reorder:${productName}`
   );
+
+  if (!result.success) throw new Error(result.error);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -132,20 +121,19 @@ const sendCustomerBillEmail = async ({
   // Format a simple text list for EmailJS
   const itemsText = items.map(item => `${item.name} x${item.qty} (₹${item.subtotal})`).join(', ');
 
-  await sendEmail(
+  const result = await sendEmail(
     {
-      to: customerEmail,
-      subject: `Your Invoice #${invoiceNumber} - ${storeName}`,
-      message: `Thank you for your purchase! Invoice #${invoiceNumber}. Items: ${itemsText}. Total: ₹${total}.`,
-      templateParams: {
-        invoice_number: invoiceNumber,
-        total_amount: `₹${total}`,
-        items_list: itemsText,
-        type: 'Invoice Receipt',
-      },
+      to_email: customerEmail,
+      invoice_number: invoiceNumber,
+      total_amount: `₹${total}`,
+      items_list: itemsText,
+      shop_name: STORE_NAME,
+      type: 'Invoice Receipt',
     },
     `Invoice:${invoiceNumber}`
   );
+
+  if (!result.success) throw new Error(result.error);
 };
 
 module.exports = {
