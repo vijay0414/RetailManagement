@@ -1,10 +1,10 @@
-# 🛒 Retail Inventory & Billing Management System
+#  Retail Inventory & Billing Management System
 
 A web-based **Retail Inventory and Billing Management System** built for departmental stores, featuring **role-based access** for Managers and Billers, **barcode-based billing**, and **automated low-stock alerts** to keep suppliers informed before products run out.
 
 ---
 
-## 📌 Overview
+##  Overview
 
 Running a departmental store means juggling two things constantly — **billing customers quickly** and **keeping stock from running out**. This project solves both problems in one system:
 
@@ -14,13 +14,13 @@ Running a departmental store means juggling two things constantly — **billing 
 
 ---
 
-## ✨ Features
+##  Features
 
-### 🔐 Role-Based Login
+###  Role-Based Login
 - Two distinct roles — **Manager** and **Biller** — each with a dedicated login and dashboard.
 - Route-level access control ensures Billers cannot access Manager-only pages (and vice versa), even via direct URL access.
 
-### 👨‍💼 Manager
+###  Manager
 - **Add Product** — register new products with name, category, price, stock, supplier details, and reorder threshold.
 - **Auto-Generated Barcode** — a unique barcode is generated automatically for every new product.
 - **Inventory View** — full stock list with low-stock items highlighted.
@@ -29,7 +29,7 @@ Running a departmental store means juggling two things constantly — **billing 
   - **Inform** → simulates sending a restock notification to the supplier.
   - **Not Now** → dismisses the alert without action.
 
-### 🧾 Biller
+###  Biller
 - **Camera-Based Barcode Scanning** — scan a product directly using the device camera (with manual entry as a fallback).
 - **Instant Product Lookup** — auto-fetches product name and price on scan.
 - **Bill Generation** — add multiple items, view a running total, and generate a printable itemized invoice.
@@ -37,7 +37,7 @@ Running a departmental store means juggling two things constantly — **billing 
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -52,7 +52,7 @@ Running a departmental store means juggling two things constantly — **billing 
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (v16 or above recommended)
@@ -78,7 +78,7 @@ The app will run at `http://localhost:3000` by default.
 
 ---
 
-## 🔑 Demo Login Credentials
+##  Demo Login Credentials
 
 | Role | Username | Password |
 |---|---|---|
@@ -89,7 +89,7 @@ The app will run at `http://localhost:3000` by default.
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 ```
 RetailManagement/
@@ -113,7 +113,7 @@ RetailManagement/
 
 ---
 
-## 🖼️ How It Works (User Flow)
+##  How It Works (User Flow)
 
 1. **Manager logs in** → adds a new product → system auto-generates a barcode.
 2. **Biller logs in** → scans the product's barcode using the camera → enters quantity → generates the bill.
@@ -123,7 +123,7 @@ RetailManagement/
 
 ---
 
-## 🗺️ Roadmap
+##  Roadmap
 
 - [ ] Backend integration (Node.js/Express + database)
 - [ ] Real authentication (JWT-based login)
@@ -133,7 +133,7 @@ RetailManagement/
 
 ---
 
-## 🤝 Contributors
+##  Contributors
 
 | Name | Role |
 |---|---|
@@ -142,12 +142,12 @@ RetailManagement/
 
 ---
 
-## 📄 License
+##  License
 
 This project is developed for academic/learning purposes. Feel free to fork and build upon it.
 
 ---
 
-## 🙋 Support
+##  Support
 
 If you run into issues or have suggestions, feel free to open an [Issue](https://github.com/vijay0414/RetailManagement/issues) on this repository.
